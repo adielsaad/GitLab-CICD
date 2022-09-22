@@ -1,0 +1,52 @@
+stages: # List of stages for jobs, and their order of execution
+  - clean
+  - build
+  - run
+  - test
+  - push
+  - deploy
+
+clean-job: # This job runs in the clean stage, which runs first.
+  stage: clean
+  script:
+    - docker rm -f weather_app
+    - echo "Clean Successful."
+
+build-job: # This job runs in the build stage.
+  stage: build
+  script:
+    - echo "Building the image..."
+    - docker build -t adielsaad/my_weather_app WeatherApp/.
+    - echo "Build Successful."
+
+run-job: # This job runs the weather application container inside Gitlab's runner.
+  stage: run
+  script:
+    - echo "Running weather application."
+    - docker run --name weather_app -d -p 80:5000 adielsaad/my_weather_app
+
+unit-test-job: # This job runs in the test stage.
+  stage: test # It only starts when the job in the build stage completes successfully.
+  rules: 
+    - if: $CI_COMMIT_BRANCH == "feature"
+  script:
+    - echo "Running unit tests..."
+    - docker exec weather_app python3 ./tests/unit_tests.py
+
+push-job: # This job runs in the push stage, which is login to DockerHub and push the new image right after.
+  stage: push
+  before_script:
+    - echo "Logging in to DockerHub.."
+    - echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+  script:
+    - echo "Pushing image to DockerHub.."
+    - docker push adielsaad/my_weather_app:latest
+
+
+deploy-job: # This job runs in the deploy stage.
+  stage: deploy # It only runs when *both* jobs in the test stage complete successfully.
+  environment: production
+  script:
+    - echo "Deploying application..."
+    - echo "Application successfully deployed."
+
