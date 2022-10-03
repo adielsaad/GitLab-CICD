@@ -40,13 +40,15 @@ push-job: # This job runs in the push stage, which is login to DockerHub and pus
     - echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
   script:
     - echo "Pushing image to DockerHub.."
-    - docker push adielsaad/my_weather_app:latest
+    - docker push adielsaad/my_weather_app:$CI_COMMIT_SHA
 
 
 deploy-job: # This job runs in the deploy stage.
   stage: deploy # It only runs when *both* jobs in the test stage complete successfully.
   environment: production
+  only:
+    - merge_requests
   script:
     - echo "Deploying application..."
+    - kubectl apply -f deployment.yml
     - echo "Application successfully deployed."
-
